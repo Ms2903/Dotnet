@@ -132,3 +132,4 @@ C:\Users\HP\OneDrive\Desktop\Dotnet-final\SportsBookingPlatform.API\obj\Debug\ne
 C:\Users\HP\OneDrive\Desktop\Dotnet-final\SportsBookingPlatform.API\obj\Debug\net10.0\SportsBookingPlatform.API.pdb
 C:\Users\HP\OneDrive\Desktop\Dotnet-final\SportsBookingPlatform.API\obj\Debug\net10.0\SportsBookingPlatform.API.genruntimeconfig.cache
 C:\Users\HP\OneDrive\Desktop\Dotnet-final\SportsBookingPlatform.API\obj\Debug\net10.0\ref\SportsBookingPlatform.API.dll
+C:\Users\HP\OneDrive\Desktop\Dotnet-final\SportsBookingPlatform.API\obj\Debug\net10.0\SportsBookingPlatform.API.sourcelink.json

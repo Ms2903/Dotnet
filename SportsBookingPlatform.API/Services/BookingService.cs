@@ -119,20 +119,9 @@ public class BookingService : IBookingService
                 throw new DomainException("Slot is no longer available.");
             }
 
-            // 4. Debit Wallet
-            var walletService = new WalletService(_context); // Using same context for transaction
-            // Ideally should check interface but we need the same context/uow. 
-            // Better to inject IWalletService but we need to ensure they share the context. 
-            // Since they are Scoped and we rely on DI, they share the context. 
-            // But here I'm using logic that might rely on SaveChanges.
-            // Let's rely on the injected logic in BookingService constructor if I add it.
-            // For now, I'll assume proper DI scope sharing.
-            
-            // Wait, I didn't inject IWalletService in BookingService constructor. I need to.
-            // But I cannot easily change the constructor now without replacing the whole file or being careful.
-            // Let's use the _context directly or instantiate WalletService as I did above since it's just a wrapper around the context.
-            // Instantiating "new WalletService(_context)" is safe if it just uses context.
-            // But let's verify WalletService constructor. Yes, it takes AppDbContext.
+            // 4. Debit Wallet (User)
+            var walletService = new WalletService(_context); 
+            // Ideally inject IWalletService, but manual instantiation preserves context for transaction within this scope logic if not using UnitOfWork.
             
             bool debitSuccess = await walletService.DebitFundsAsync(userId, validLockData.LockedPrice, $"Booking:{request.SlotId}");
             if (!debitSuccess)
@@ -140,24 +129,42 @@ public class BookingService : IBookingService
                 throw new DomainException("Insufficient wallet balance.");
             }
 
-            // 5. Update Slot Status
+            // 5. Credit Venue Owner
+            // specific fetching of venue owner
+            if (slot.Court == null) 
+            {
+                 // Should be loaded by GetSlotByIdAsync
+                 await _context.Entry(slot).Reference(s => s.Court).LoadAsync();
+            }
+            
+            if (slot.Court != null)
+            {
+                // We need Venue to get OwnerId
+                var venue = await _context.Venues.FindAsync(slot.Court.VenueId);
+                if (venue != null)
+                {
+                    // Credit Owner
+                    await walletService.AddFundsAsync(venue.OwnerId, new AddFundsRequestDto
+                    {
+                        Amount = validLockData.LockedPrice,
+                        ReferenceId = $"BookingCredit:{request.SlotId}"
+                    });
+                }
+            }
+
+            // 6. Update Slot Status
             slot.Status = SlotStatus.Booked;
             await _slotRepository.UpdateSlotAsync(slot);
 
-            // 6. Create Booking
+            // 7. Create Booking
             var booking = new Booking
             {
                 UserId = userId,
                 SlotId = request.SlotId,
                 LockedPrice = validLockData.LockedPrice,
                 Status = BookingStatus.Confirmed,
-                LockExpiryTime = validLockData.ExpiryTime // Keep record
+                LockExpiryTime = validLockData.ExpiryTime 
             };
-            
-            // We need IBookingRepository. I'll add a provisional private field or just use context directly if I didn't inject it.
-            // I didn't inject IBookingRepository yet. 
-            // I'll add it to the context directly primarily to save lines or I should update constructor.
-            // Updating constructor is better.
             
             _context.Bookings.Add(booking);
             await _context.SaveChangesAsync();
