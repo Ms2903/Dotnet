@@ -38,18 +38,4 @@ public class User
     public ICollection<Booking> Bookings { get; set; } = new List<Booking>();
 }
 
-public class UserProfile
-{
-    [Key]
-    public Guid Id { get; set; } = Guid.NewGuid();
-    
-    public Guid UserId { get; set; }
-    [JsonIgnore]
-    public User? User { get; set; }
 
-    public double AverageRating { get; set; }
-    public int GamesPlayed { get; set; }
-    
-    // Stored as JSONB in DB
-    public string PreferredSportsJson { get; set; } = "[]"; 
-}

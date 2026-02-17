@@ -190,6 +190,9 @@ namespace SportsBookingPlatform.API.Migrations
                     b.Property<Guid>("GameId")
                         .HasColumnType("uuid");
 
+                    b.Property<bool>("IsNotified")
+                        .HasColumnType("boolean");
+
                     b.Property<DateTime>("JoinedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -346,6 +349,9 @@ namespace SportsBookingPlatform.API.Migrations
                     b.Property<string>("PreferredSportsJson")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<int>("TotalRatingsReceived")
+                        .HasColumnType("integer");
 
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid");

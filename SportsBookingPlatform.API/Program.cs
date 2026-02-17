@@ -90,8 +90,15 @@ builder.Services.AddScoped<IRatingRepository, RatingRepository>();
 builder.Services.AddScoped<IRatingService, RatingService>();
 builder.Services.AddScoped<IDiscountRepository, DiscountRepository>();
 builder.Services.AddScoped<IDiscountService, DiscountService>();
+builder.Services.AddScoped<IGameWaitlistRepository, GameWaitlistRepository>();
+builder.Services.AddScoped<IUserProfileService, UserProfileService>();
 
-builder.Services.AddMemoryCache();
+builder.Services.AddMemoryCache(); // Restored
+
+// Background Services
+builder.Services.AddHostedService<SportsBookingPlatform.API.BackgroundServices.GameCancellationBackgroundService>();
+builder.Services.AddHostedService<SportsBookingPlatform.API.BackgroundServices.PopularityBackgroundService>();
+builder.Services.AddHostedService<SportsBookingPlatform.API.BackgroundServices.GameCompletionBackgroundService>();
 
 var app = builder.Build();
 

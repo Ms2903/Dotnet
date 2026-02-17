@@ -13,14 +13,16 @@ public class BookingService : IBookingService
     private readonly ISlotRepository _slotRepository;
     private readonly IMemoryCache _memoryCache;
     private readonly AppDbContext _context;
-    private readonly IDiscountService _discountService; // Added
+    private readonly IDiscountService _discountService;
+    private readonly ISlotService _slotService; // Added
 
-    public BookingService(ISlotRepository slotRepository, IMemoryCache memoryCache, AppDbContext context, IDiscountService discountService)
+    public BookingService(ISlotRepository slotRepository, IMemoryCache memoryCache, AppDbContext context, IDiscountService discountService, ISlotService slotService)
     {
         _slotRepository = slotRepository;
         _memoryCache = memoryCache;
         _context = context;
         _discountService = discountService;
+        _slotService = slotService;
     }
 
     public async Task<LockSlotResponseDto> LockSlotAsync(LockSlotRequestDto request, Guid userId)
@@ -30,6 +32,12 @@ public class BookingService : IBookingService
         if (slot == null) throw new DomainException("Slot not found.");
         if (slot.Status != SlotStatus.Available) throw new DomainException("Slot is not available.");
 
+        // Explicitly load Court if missing (Robustness)
+        if (slot.Court == null)
+        {
+            await _context.Entry(slot).Reference(s => s.Court).LoadAsync();
+        }
+
         // 2. Check if already locked in MemoryCache
         string cacheKey = $"SlotLock:{request.SlotId}";
         if (_memoryCache.TryGetValue(cacheKey, out _))
@@ -38,32 +46,8 @@ public class BookingService : IBookingService
         }
 
         // 3. Calculate Final Price
-        // Replicate logic from SlotService. Ideally shared via a PricingService or by calling SlotService.
-        // But here we rely on DiscountService directly.
-        
-        decimal timeMultiplier = 1.0m;
-        var hoursUntilSlot = (slot.StartTime - DateTime.UtcNow).TotalHours;
-        if (hoursUntilSlot < 6) timeMultiplier = 1.5m;
-        else if (hoursUntilSlot < 24) timeMultiplier = 1.2m;
-        
-        decimal priceAfterMultipliers = slot.BasePrice * timeMultiplier;
-        
-        // Apply Discount
-        // Ensure Slot has Court loaded for VenueId. 
-        // If repository doesn't include it, we might need to fetch it.
-        // Assuming GetSlotByIdAsync includes Court. If not, fallback to fetching court.
-        Guid venueId = slot.Court?.VenueId ?? Guid.Empty;
-        if (venueId == Guid.Empty)
-        {
-             // Try to load court if missing? Or assume no discount?
-             // Ideally we throw or fetch. Let's start with basic assumption.
-             // If we really need it, we should use _courtRepository. 
-             // But for now, if slot.Court is null, we miss discount.
-        }
-        
-        decimal dynamicPrice = venueId != Guid.Empty 
-            ? await _discountService.ApplyDiscountsAsync(venueId, slot.CourtId, priceAfterMultipliers, slot.StartTime)
-            : priceAfterMultipliers;
+        // Use the centralized dynamic pricing logic from SlotService
+        decimal dynamicPrice = await _slotService.CalculateDynamicPrice(slot);
 
         // 4. Create Lock Object
         var lockData = new SlotLockData

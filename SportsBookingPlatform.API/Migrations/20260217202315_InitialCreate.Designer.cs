@@ -12,7 +12,7 @@ using SportsBookingPlatform.API.Data;
 namespace SportsBookingPlatform.API.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260217165754_InitialCreate")]
+    [Migration("20260217202315_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -193,6 +193,9 @@ namespace SportsBookingPlatform.API.Migrations
                     b.Property<Guid>("GameId")
                         .HasColumnType("uuid");
 
+                    b.Property<bool>("IsNotified")
+                        .HasColumnType("boolean");
+
                     b.Property<DateTime>("JoinedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -242,7 +245,7 @@ namespace SportsBookingPlatform.API.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<Guid>("GameId")
+                    b.Property<Guid?>("GameId")
                         .HasColumnType("uuid");
 
                     b.Property<Guid>("RatedByUserId")
@@ -567,9 +570,7 @@ namespace SportsBookingPlatform.API.Migrations
                 {
                     b.HasOne("SportsBookingPlatform.API.Entities.Game", "Game")
                         .WithMany()
-                        .HasForeignKey("GameId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .HasForeignKey("GameId");
 
                     b.HasOne("SportsBookingPlatform.API.Entities.User", "RatedByUser")
                         .WithMany()

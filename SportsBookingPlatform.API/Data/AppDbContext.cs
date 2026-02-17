@@ -20,6 +20,7 @@ public class AppDbContext : DbContext
     public DbSet<Game> Games { get; set; }
     public DbSet<GameParticipant> GameParticipants { get; set; }
     public DbSet<GameWaitlist> GameWaitlists { get; set; }
+    // public DbSet<Waitlist> Waitlists { get; set; } // Removed
     public DbSet<Discount> Discounts { get; set; }
     public DbSet<Rating> Ratings { get; set; }
 

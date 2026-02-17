@@ -43,4 +43,52 @@ public class RatingsController : ControllerBase
         var ratings = await _ratingService.GetRatingsByTargetAsync(targetId);
         return Ok(ratings);
     }
+
+    // Specific endpoints as requested
+    [HttpGet("venue/{id}")]
+    public async Task<ActionResult<IEnumerable<RatingResponseDto>>> GetVenueRatings(Guid id)
+    {
+        return await GetRatings(id);
+    }
+
+    [HttpGet("court/{id}")]
+    public async Task<ActionResult<IEnumerable<RatingResponseDto>>> GetCourtRatings(Guid id)
+    {
+        return await GetRatings(id);
+    }
+
+    [HttpGet("player/{id}")]
+    public async Task<ActionResult<IEnumerable<RatingResponseDto>>> GetPlayerRatings(Guid id)
+    {
+        return await GetRatings(id);
+    }
+
+    // POST specific endpoints routing to Submit
+    [HttpPost("venue")]
+    [Authorize]
+    public async Task<ActionResult<RatingResponseDto>> RateVenue(SubmitRatingRequestDto request)
+    {
+        // Force Type? Or trust request?
+        // Requirement: POST /api/ratings/venue
+        // DTO has TargetType.
+        // Good practice to enforce it here.
+        request.TargetType = "Venue";
+        return await SubmitRating(request);
+    }
+
+    [HttpPost("court")]
+    [Authorize]
+    public async Task<ActionResult<RatingResponseDto>> RateCourt(SubmitRatingRequestDto request)
+    {
+        request.TargetType = "Court";
+        return await SubmitRating(request);
+    }
+
+    [HttpPost("player")]
+    [Authorize]
+    public async Task<ActionResult<RatingResponseDto>> RatePlayer(SubmitRatingRequestDto request)
+    {
+        request.TargetType = "Player";
+        return await SubmitRating(request);
+    }
 }

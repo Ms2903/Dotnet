@@ -30,12 +30,12 @@ public class WalletService : IWalletService
 
     public async Task<WalletResponseDto> AddFundsAsync(Guid userId, AddFundsRequestDto request)
     {
-        // Idempotency check should be here using ReferenceId on Transactions table
-        if (await _context.WalletTransactions.AnyAsync(t => t.ReferenceId == request.ReferenceId && t.Type == TransactionType.Credit))
+        // Idempotency check: Scoped to the specific wallet/user to allow same RefId for different users (e.g. "Refund")
+        // but prevent double-crediting the same user with same RefId.
+        if (await _context.WalletTransactions.AnyAsync(t => t.ReferenceId == request.ReferenceId && t.Type == TransactionType.Credit && t.Wallet.UserId == userId))
         {
-             // Already processed, return current wallet state
+             // Already processed for this user, return current wallet state
             return await GetWalletByUserIdAsync(userId);
-            // Or throw exception depending on requirements. Returning state is idempotent compliant.
         }
 
         var wallet = await _context.Wallets.FirstOrDefaultAsync(w => w.UserId == userId);

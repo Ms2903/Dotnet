@@ -15,13 +15,17 @@ public class SubmitRatingRequestDto
     public string Comment { get; set; } = string.Empty;
 
     [Required]
-    public string TargetType { get; set; } = "Venue"; // "Venue" or "Game"
+    public string TargetType { get; set; } = "Venue"; // "Venue", "Court", "Player", "Game"
+
+    [Required]
+    public Guid GameId { get; set; } // Context for rating
 }
 
 public class RatingResponseDto
 {
     public Guid RatingId { get; set; }
     public Guid TargetId { get; set; } // VenueId or GameId
+    public Guid GameId { get; set; }
     public Guid AuthorId { get; set; }
     public int Score { get; set; }
     public string Comment { get; set; } = string.Empty;

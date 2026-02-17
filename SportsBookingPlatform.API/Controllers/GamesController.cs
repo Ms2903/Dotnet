@@ -45,28 +45,48 @@ public class GamesController : ControllerBase
         return Ok(games);
     }
 
-    [HttpPut("{id}/join")]
-    [Authorize]
-    public async Task<IActionResult> JoinGame(Guid id)
+
+    [HttpPost("{gameId}/join")]
+    [Authorize] // Added Authorize attribute based on original pattern
+    public async Task<IActionResult> JoinGame(Guid gameId)
     {
-        try
+        try // Added try-catch based on original pattern
         {
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
-            if (userIdClaim == null) return Unauthorized();
+            if (userIdClaim == null) return Unauthorized(); // Added check based on original pattern
 
             var userId = Guid.Parse(userIdClaim.Value);
-            await _gameService.JoinGameAsync(id, userId);
-            return Ok(new { message = "Joined game successfully." });
+            await _gameService.JoinGameAsync(gameId, userId);
+            return Ok(new { Message = "Joined game successfully." });
         }
         catch (DomainException ex)
         {
             return BadRequest(new { message = ex.Message });
         }
     }
-    
-    [HttpPut("{id}/leave")]
+
+    [HttpDelete("{gameId}/leave")]
+    [Authorize] // Added Authorize attribute based on original pattern
+    public async Task<IActionResult> LeaveGame(Guid gameId)
+    {
+        try // Added try-catch based on original pattern
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            if (userIdClaim == null) return Unauthorized(); // Added check based on original pattern
+
+            var userId = Guid.Parse(userIdClaim.Value);
+            await _gameService.LeaveGameAsync(gameId, userId);
+            return Ok(new { Message = "Left game successfully." });
+        }
+        catch (DomainException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    [HttpPost("{gameId}/waitlist")]
     [Authorize]
-    public async Task<IActionResult> LeaveGame(Guid id)
+    public async Task<IActionResult> JoinWaitlist(Guid gameId)
     {
         try
         {
@@ -74,8 +94,27 @@ public class GamesController : ControllerBase
             if (userIdClaim == null) return Unauthorized();
 
             var userId = Guid.Parse(userIdClaim.Value);
-            await _gameService.LeaveGameAsync(id, userId);
-            return Ok(new { message = "Left game successfully." });
+            await _gameService.JoinWaitlistAsync(gameId, userId);
+            return Ok(new { Message = "Joined waitlist successfully." });
+        }
+        catch (DomainException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    [HttpDelete("{gameId}/waitlist")]
+    [Authorize]
+    public async Task<IActionResult> LeaveWaitlist(Guid gameId)
+    {
+        try
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            if (userIdClaim == null) return Unauthorized();
+
+            var userId = Guid.Parse(userIdClaim.Value);
+            await _gameService.LeaveWaitlistAsync(gameId, userId);
+            return Ok(new { Message = "Left waitlist successfully." });
         }
         catch (DomainException ex)
         {

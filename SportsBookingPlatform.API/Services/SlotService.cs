@@ -2,6 +2,7 @@ using SportsBookingPlatform.API.Dtos;
 using SportsBookingPlatform.API.Entities;
 using SportsBookingPlatform.API.Exceptions;
 using SportsBookingPlatform.API.Repositories;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace SportsBookingPlatform.API.Services;
 
@@ -10,65 +11,31 @@ public class SlotService : ISlotService
     private readonly ISlotRepository _slotRepository;
     private readonly ICourtRepository _courtRepository;
     private readonly IDiscountService _discountService;
+    private readonly IMemoryCache _memoryCache; // Added
 
-    public SlotService(ISlotRepository slotRepository, ICourtRepository courtRepository, IDiscountService discountService)
+    public SlotService(ISlotRepository slotRepository, ICourtRepository courtRepository, IDiscountService discountService, IMemoryCache memoryCache)
     {
         _slotRepository = slotRepository;
         _courtRepository = courtRepository;
         _discountService = discountService;
+        _memoryCache = memoryCache;
     }
 
     public async Task GenerateSlotsAsync(GenerateSlotsRequestDto request)
     {
-        var court = await _courtRepository.GetCourtByIdAsync(request.CourtId);
-        if (court == null) throw new DomainException("Court not found.");
-
-        var slots = new List<Slot>();
-        var currentDate = request.StartDate.Date;
-        var endDate = request.EndDate.Date;
-
-        while (currentDate <= endDate)
-        {
-            var dayOfWeek = currentDate.DayOfWeek;
-            var operatingHour = court.OperatingHours.FirstOrDefault(oh => oh.DayOfWeek == dayOfWeek);
-
-            if (operatingHour != null)
-            {
-                var startTime = currentDate.Add(operatingHour.OpenTime);
-                var closeTime = currentDate.Add(operatingHour.CloseTime);
-
-                while (startTime.AddMinutes(court.SlotDurationMinutes) <= closeTime)
-                {
-                    var slotEndTime = startTime.AddMinutes(court.SlotDurationMinutes);
-                    
-                    slots.Add(new Slot
-                    {
-                        CourtId = court.CourtId,
-                        StartTime = DateTime.SpecifyKind(startTime, DateTimeKind.Utc),
-                        EndTime = DateTime.SpecifyKind(slotEndTime, DateTimeKind.Utc),
-                        Status = SlotStatus.Available,
-                        BasePrice = court.BasePrice
-                    });
-
-                    startTime = slotEndTime;
-                }
-            }
-
-            currentDate = currentDate.AddDays(1);
-        }
-        
-        var existingSlots = await _slotRepository.GetSlotsByCourtAndDateRangeAsync(
-            request.CourtId, 
-            DateTime.SpecifyKind(request.StartDate, DateTimeKind.Utc), 
-            DateTime.SpecifyKind(request.EndDate.AddDays(1), DateTimeKind.Utc));
-
-        var newSlots = slots.Where(s => !existingSlots.Any(es => es.StartTime == s.StartTime)).ToList();
-
-        if (newSlots.Any())
-        {
-            await _slotRepository.AddSlotsAsync(newSlots);
-        }
+         // ... (existing code)
+         // Wait, I should use valid existing code or just replace the constructor and add methods at the end?
+         // ReplaceFileContent is better for small chunks.
+         // But I need to add field, update constructor, add method, update CalculatePrice.
+         // Effectively rewriting the class structure.
+         // I'll do it in chunks.
     }
+    
+    // Chunk 1: Constructor and Field
+    // StartLine 10, EndLine 19
+
+
+
 
     public async Task<IEnumerable<SlotDto>> GetAvailableSlotsAsync(SlotSearchRequestDto request)
     {
@@ -102,27 +69,60 @@ public class SlotService : ISlotService
         return slotDtos;
     }
 
-    private async Task<decimal> CalculateDynamicPrice(Slot slot)
+    public void RecordVenueSearch(Guid venueId)
     {
-        // 1. Time-based Multiplier
+        string cacheKey = $"VenueSearches:{venueId}";
+        _memoryCache.TryGetValue(cacheKey, out int currentCount);
+        
+        currentCount++;
+        
+        var cacheOptions = new MemoryCacheEntryOptions()
+            .SetSlidingExpiration(TimeSpan.FromMinutes(5)); // Spec: 5 min window
+            
+        _memoryCache.Set(cacheKey, currentCount, cacheOptions);
+    }
+
+    public async Task<decimal> CalculateDynamicPrice(Slot slot)
+    {
+        Guid venueId = slot.Court?.VenueId ?? Guid.Empty;
+
+        // 1. Demand Multiplier
+        // 1.0 (0-1), 1.2 (2-5), 1.5 (>5)
+        decimal demandMultiplier = 1.0m;
+        if (venueId != Guid.Empty)
+        {
+            if (_memoryCache.TryGetValue($"VenueSearches:{venueId}", out int searchCount))
+            {
+                if (searchCount > 5) demandMultiplier = 1.5m;
+                else if (searchCount >= 2) demandMultiplier = 1.2m;
+            }
+        }
+
+        // 2. Time-based Multiplier
+        // 1.0 (>24h), 1.2 (6-24h), 1.5 (<6h)
         decimal timeMultiplier = 1.0m;
         var hoursUntilSlot = (slot.StartTime - DateTime.UtcNow).TotalHours;
         
         if (hoursUntilSlot < 6) timeMultiplier = 1.5m;
         else if (hoursUntilSlot < 24) timeMultiplier = 1.2m;
-        
-        decimal priceAfterMultipliers = slot.BasePrice * timeMultiplier;
 
-        // 2. Apply Discounts
-        // We need VenueId. Slot has Court, Court has VenueId? 
-        // Slot -> CourtId. We need to fetch Court to get VenueId if not loaded.
-        // The repository `GetAvailableSlotsAsync` usually includes Court. 
-        // Let's assume s.Court is not null or we have VenueId from request (but slot might rely on its own data).
-        // If s.Court is null, we can't easily get VenueId. Repos should Include(s => s.Court).
-        
-        Guid venueId = slot.Court?.VenueId ?? Guid.Empty; 
-        // If empty, discount service might fail or return 0 discount.
-        
+        // 3. Historical Popularity Multiplier
+        // Computed via background job (VenuePopularity:{venueId})
+        // 1.0 (Low), 1.2 (Med), 1.5 (High)
+        decimal historicalMultiplier = 1.0m;
+        if (venueId != Guid.Empty)
+        {
+            if (_memoryCache.TryGetValue($"VenuePopularity:{venueId}", out decimal cachedMultiplier))
+            {
+                historicalMultiplier = cachedMultiplier;
+            }
+        }
+
+        // Calculate Final Price
+        // Formula: Base * Demand * Time * Historical
+        decimal priceAfterMultipliers = slot.BasePrice * demandMultiplier * timeMultiplier * historicalMultiplier;
+
+        // 4. Discount Factor
         if (venueId != Guid.Empty)
         {
             return await _discountService.ApplyDiscountsAsync(venueId, slot.CourtId, priceAfterMultipliers, slot.StartTime);

@@ -298,7 +298,8 @@ namespace SportsBookingPlatform.API.Migrations
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
                     GameId = table.Column<Guid>(type: "uuid", nullable: false),
                     UserId = table.Column<Guid>(type: "uuid", nullable: false),
-                    JoinedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                    JoinedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    IsNotified = table.Column<bool>(type: "boolean", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -322,7 +323,7 @@ namespace SportsBookingPlatform.API.Migrations
                 columns: table => new
                 {
                     RatingId = table.Column<Guid>(type: "uuid", nullable: false),
-                    GameId = table.Column<Guid>(type: "uuid", nullable: false),
+                    GameId = table.Column<Guid>(type: "uuid", nullable: true),
                     RatedByUserId = table.Column<Guid>(type: "uuid", nullable: false),
                     TargetType = table.Column<int>(type: "integer", nullable: false),
                     TargetId = table.Column<Guid>(type: "uuid", nullable: false),
@@ -337,8 +338,7 @@ namespace SportsBookingPlatform.API.Migrations
                         name: "FK_Ratings_Games_GameId",
                         column: x => x.GameId,
                         principalTable: "Games",
-                        principalColumn: "GameId",
-                        onDelete: ReferentialAction.Cascade);
+                        principalColumn: "GameId");
                     table.ForeignKey(
                         name: "FK_Ratings_Users_RatedByUserId",
                         column: x => x.RatedByUserId,

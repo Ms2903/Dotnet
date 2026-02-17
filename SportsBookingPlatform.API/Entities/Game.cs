@@ -56,4 +56,6 @@ public class GameWaitlist
     public User? User { get; set; }
 
     public DateTime JoinedAt { get; set; } = DateTime.UtcNow;
+
+    public bool IsNotified { get; set; } = false;
 }

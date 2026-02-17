@@ -36,6 +36,11 @@ public class SlotsController : ControllerBase
     [HttpGet("available")]
     public async Task<ActionResult<IEnumerable<SlotDto>>> GetAvailableSlots([FromQuery] SlotSearchRequestDto request)
     {
+        if (request.VenueId != Guid.Empty)
+        {
+            _slotService.RecordVenueSearch(request.VenueId);
+        }
+        
         var slots = await _slotService.GetAvailableSlotsAsync(request);
         return Ok(slots);
     }

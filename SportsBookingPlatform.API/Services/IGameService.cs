@@ -8,4 +8,6 @@ public interface IGameService
     Task<IEnumerable<GameResponseDto>> GetGamesAsync(GameSearchRequestDto request);
     Task JoinGameAsync(Guid gameId, Guid userId);
     Task LeaveGameAsync(Guid gameId, Guid userId);
+    Task JoinWaitlistAsync(Guid gameId, Guid userId); // Added
+    Task LeaveWaitlistAsync(Guid gameId, Guid userId); // Added
 }
